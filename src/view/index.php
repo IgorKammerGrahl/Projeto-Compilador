@@ -85,7 +85,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Analisador Léxico e Sintático</h1>
+        <h1>Analisador Léxico, Sintático e Semântico</h1>
         <form method="post">
             <label for="sourceCode">Digite o código fonte:</label>
             <textarea name="sourceCode" id="sourceCode"><?php echo isset($_POST['sourceCode']) ? htmlspecialchars($_POST['sourceCode']) : ''; ?></textarea>
@@ -93,14 +93,15 @@
         </form>
 
         <?php
-        require_once __DIR__ . '/../../vendor/autoload.php';
         require_once __DIR__ . '/../config.php';
+        require_once SEMANTICO_PATH . '/semantico.php';
         require_once LEXICO_PATH . '/lexer.php';
         require_once SINTATICO_PATH . '/parser.php';
         require_once LEXICO_PATH . '/token.php';
 
-        use App\Lexico\lexer;
-        use App\Sintatico\parser;
+        use App\Lexico\Lexer;
+        use App\Sintatico\Parser;
+        use App\Semantico\Semantico;
         use App\Lexico\Token;
 
         // Caminho para os arquivos JSON
@@ -112,19 +113,11 @@
 
             echo '<div class="output-section">';
             try {
-                // Exibe o caminho do arquivo JSON para depuração
-                echo "Caminho do arquivo JSON: " . $jsonLexicoPath . "<br>";
-                
-                // Verifica se o arquivo tabela.json existe
-                if (!file_exists($jsonLexicoPath)) {
-                    echo "Erro: o arquivo tabela.json não foi encontrado em {$jsonLexicoPath}.<br>";
-                } else {
-                    echo "Arquivo encontrado: {$jsonLexicoPath}.<br>";
-                }
-
                 // Etapa 1: Análise Léxica
-                $analisadorLexico = new lexer($sourceCode, $jsonLexicoPath);
-                $tokens = $analisadorLexico->analisar();
+                $analisadorLexico = new Lexer($sourceCode, $jsonLexicoPath);
+                $resultadoLexico = $analisadorLexico->analisar();
+                $tokens = $resultadoLexico['tokens']; // Pegamos apenas os tokens
+                $errosLexicos = $resultadoLexico['erros']; // Pegamos os erros léxicos
 
                 echo "<h2>Tokens Reconhecidos:</h2><pre>";
                 foreach ($tokens as $token) {
@@ -132,12 +125,29 @@
                 }
                 echo "</pre>";
 
-                // Etapa 2: Análise Sintática
-                $analisadorSintatico = new parser($jsonSintaticoPath);
-                $resultado = $analisadorSintatico->analisar($tokens);
+                // Exibe erros léxicos se houver
+                if (!empty($errosLexicos)) {
+                    echo "<h2>Erros Léxicos:</h2><pre>";
+                    foreach ($errosLexicos as $erro) {
+                        echo "$erro\n";
+                    }
+                    echo "</pre>";
+                }
 
-                echo "<h2>Resultado da Análise Sintática:</h2><pre>";
-                echo $resultado ? "Análise sintática concluída com sucesso!" : "Erro de sintaxe encontrado.";
+                // Etapa 2: Análise Sintática
+                $analisadorSintatico = new Parser($jsonSintaticoPath);
+                $arvoreSintatica = $analisadorSintatico->analisar($tokens);
+
+                echo "<h2>Árvore Sintática:</h2><pre>";
+                echo $arvoreSintatica;
+                echo "</pre>";
+
+                // Etapa 3: Análise Semântica
+                $analisadorSemantico = new Semantico();
+                $analisadorSemantico->analisar($arvoreSintatica->getRaiz());
+
+                echo "<h2>Resultado da Análise Semântica:</h2><pre>";
+                echo "Análise semântica concluída com sucesso!";
                 echo "</pre>";
             } catch (Exception $e) {
                 echo "<h2>Erro</h2><pre>" . htmlspecialchars($e->getMessage()) . "</pre>";

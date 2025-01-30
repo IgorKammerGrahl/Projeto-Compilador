@@ -14,6 +14,15 @@ class Token {
         $this->line = $line;
     }
 
+    public function toArray(): array {
+        return [
+            'token' => $this->name,
+            'lexema' => $this->lexeme,
+            'linha' => $this->line,
+            'inicio' => $this->inicio
+        ];
+    }
+
     public function getName(bool $lower = false): string {
         return $lower ? strtolower($this->name) : $this->name;
     }
@@ -31,6 +40,12 @@ class Token {
     }
 
     public function __toString(): string {
-        return "{$this->getName()} - {$this->getLexeme()}";
+        return sprintf(
+            "[%d:%d] %s (%s)",
+            $this->line,
+            $this->inicio,
+            $this->name,
+            $this->lexeme
+        );
     }
 }
